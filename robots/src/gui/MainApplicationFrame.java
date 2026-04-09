@@ -3,6 +3,8 @@ package gui;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
@@ -17,23 +19,32 @@ import javax.swing.JOptionPane;
 
 import log.Logger;
 
-/**
- * Что требуется сделать:
- * 1. Метод создания меню перегружен функционалом и трудно читается. 
- * Следует разделить его на серию более простых методов (или вообще выделить отдельный класс).
- *
- */
 public class MainApplicationFrame extends JFrame
 {
     private final JDesktopPane desktopPane = new JDesktopPane();
-    
+    private WindowStateManager stateManager;
+
+    private static final String LOG_WINDOW_ID = "logWindow";
+    private static final String GAME_WINDOW_ID = "gameWindow";
+
+    private LogWindow logWindow;
+    private GameWindow gameWindow;
+
     public MainApplicationFrame() {
-        //Make the big window be indented 50 pixels from each edge
-        //of the screen.
+        stateManager = new WindowStateManager();
+        stateManager.loadFromFile();
+
         initializeFrame();
         createAndAddWindows();
         setupMenuBar();
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                closeApplication();
+            }
+        });
     }
 
     private void initializeFrame() {
@@ -46,11 +57,11 @@ public class MainApplicationFrame extends JFrame
     }
 
     private void createAndAddWindows() {
-        LogWindow logWindow = createLogWindow();
-        addWindow(logWindow);
+        logWindow = createLogWindow();
+        addWindow(logWindow, LOG_WINDOW_ID);
 
-        GameWindow gameWindow = createGameWindow();
-        addWindow(gameWindow);
+        gameWindow = createGameWindow();
+        addWindow(gameWindow, GAME_WINDOW_ID);
     }
 
     private GameWindow createGameWindow() {
@@ -74,9 +85,10 @@ public class MainApplicationFrame extends JFrame
         logWindow.pack();
     }
     
-    protected void addWindow(JInternalFrame frame)
+    protected void addWindow(JInternalFrame frame, String windowId)
     {
         desktopPane.add(frame);
+        stateManager.restoreWindowState(frame, windowId);
         frame.setVisible(true);
     }
 
@@ -91,7 +103,7 @@ public class MainApplicationFrame extends JFrame
     }
 
     private void closeApplication() {
-
+        saveAllWindowsState();
         UIManager.put("OptionPane.yesButtonText"   , "Да"    );
         UIManager.put("OptionPane.noButtonText"    , "Нет"   );
 
@@ -105,6 +117,7 @@ public class MainApplicationFrame extends JFrame
 
 
         if (result == JOptionPane.YES_OPTION) {
+            stateManager.saveToFile();
             System.exit(0);
         }
     }
@@ -188,6 +201,16 @@ public class MainApplicationFrame extends JFrame
             | IllegalAccessException | UnsupportedLookAndFeelException e)
         {
             // just ignore
+        }
+    }
+
+    private void saveAllWindowsState() {
+        if (logWindow != null) {
+            stateManager.saveWindowState(logWindow, LOG_WINDOW_ID);
+        }
+
+        if (gameWindow != null) {
+            stateManager.saveWindowState(gameWindow, GAME_WINDOW_ID);
         }
     }
 }
