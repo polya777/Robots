@@ -3,6 +3,8 @@ package gui;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import javax.swing.JDesktopPane;
 import javax.swing.JFrame;
@@ -14,26 +16,38 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.JOptionPane;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
 
 import log.Logger;
 
-/**
- * Что требуется сделать:
- * 1. Метод создания меню перегружен функционалом и трудно читается. 
- * Следует разделить его на серию более простых методов (или вообще выделить отдельный класс).
- *
- */
 public class MainApplicationFrame extends JFrame
 {
     private final JDesktopPane desktopPane = new JDesktopPane();
-    
+    private WindowStateManager stateManager;
+
+    private static final String LOG_WINDOW_ID = "logWindow";
+    private static final String GAME_WINDOW_ID = "gameWindow";
+
+    private LogWindow logWindow;
+    private GameWindow gameWindow;
+
     public MainApplicationFrame() {
-        //Make the big window be indented 50 pixels from each edge
-        //of the screen.
+        stateManager = new WindowStateManager();
+        stateManager.loadFromFile();
+
         initializeFrame();
         createAndAddWindows();
         setupMenuBar();
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        enableAutoSave();
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                closeApplication();
+            }
+        });
     }
 
     private void initializeFrame() {
@@ -46,11 +60,11 @@ public class MainApplicationFrame extends JFrame
     }
 
     private void createAndAddWindows() {
-        LogWindow logWindow = createLogWindow();
-        addWindow(logWindow);
+        logWindow = createLogWindow();
+        addWindow(logWindow, LOG_WINDOW_ID);
 
-        GameWindow gameWindow = createGameWindow();
-        addWindow(gameWindow);
+        gameWindow = createGameWindow();
+        addWindow(gameWindow, GAME_WINDOW_ID);
     }
 
     private GameWindow createGameWindow() {
@@ -74,9 +88,11 @@ public class MainApplicationFrame extends JFrame
         logWindow.pack();
     }
     
-    protected void addWindow(JInternalFrame frame)
+    protected void addWindow(JInternalFrame frame, String windowId)
     {
+        stateManager.setWindowId(frame, windowId);
         desktopPane.add(frame);
+        stateManager.restoreWindowState(frame, windowId);
         frame.setVisible(true);
     }
 
@@ -105,6 +121,7 @@ public class MainApplicationFrame extends JFrame
 
 
         if (result == JOptionPane.YES_OPTION) {
+            stateManager.saveToFile();
             System.exit(0);
         }
     }
@@ -189,5 +206,48 @@ public class MainApplicationFrame extends JFrame
         {
             // just ignore
         }
+    }
+
+    private void saveAllWindowsState() {
+        JInternalFrame[] allFrames = desktopPane.getAllFrames();
+        for (JInternalFrame frame : allFrames) {
+            String windowId = (String) frame.getClientProperty("windowId");
+            if (windowId != null) {
+                stateManager.saveWindowState(frame, windowId);
+            }
+        }
+    }
+
+    private void enableAutoSave() {
+        JInternalFrame[] frames = desktopPane.getAllFrames();
+        for (JInternalFrame frame : frames) {
+            addSaveListeners(frame);
+        }
+    }
+
+    private void addSaveListeners(JInternalFrame frame) {
+        frame.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                saveAllWindowsState();
+            }
+
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                saveAllWindowsState();
+            }
+        });
+
+        frame.addInternalFrameListener(new InternalFrameAdapter() {
+            @Override
+            public void internalFrameIconified(InternalFrameEvent e) {
+                saveAllWindowsState();
+            }
+
+            @Override
+            public void internalFrameDeiconified(InternalFrameEvent e) {
+                saveAllWindowsState();
+            }
+        });
     }
 }
