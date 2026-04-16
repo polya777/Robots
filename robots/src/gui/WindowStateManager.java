@@ -1,7 +1,6 @@
 package gui;
 
 import java.beans.PropertyVetoException;
-import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JInternalFrame;
@@ -9,17 +8,17 @@ import javax.swing.SwingUtilities;
 
 public class WindowStateManager {
 
-    private static final String CONFIG_FILE = System.getProperty("user.home") +
-            File.separator + ".robots_program_config.ser";
-
-    private Map<String, WindowState> windowStates;
+    private Map<String, WindowStateStorage.WindowState> windowStates;
+    private WindowStateStorage storage;
 
     public WindowStateManager() {
         windowStates = new HashMap<>();
+        this.storage = new WindowStateStorage();
+        this.windowStates = new HashMap<>();
     }
 
     public void saveWindowState(JInternalFrame frame, String windowId) {
-        WindowState state = new WindowState();
+        WindowStateStorage.WindowState state = new WindowStateStorage.WindowState();
         state.x = frame.getX();
         state.y = frame.getY();
         state.width = frame.getWidth();
@@ -29,7 +28,7 @@ public class WindowStateManager {
     }
 
     public void restoreWindowState(JInternalFrame frame, String windowId) {
-        WindowState state = windowStates.get(windowId);
+        WindowStateStorage.WindowState state = windowStates.get(windowId);
         if (state != null) {
             frame.setBounds(state.x, state.y, state.width, state.height);
             if (state.isIcon) {
@@ -46,31 +45,15 @@ public class WindowStateManager {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public void loadFromFile() {
-        File file = new File(CONFIG_FILE);
-        if (!file.exists()) {
-            return;
-        }
-
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-            windowStates = (Map<String, WindowState>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Ошибка загрузки конфигурации: " + e.getMessage());
-        }
+        windowStates = storage.loadFromFile();
     }
 
     public void saveToFile() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(CONFIG_FILE))) {
-            oos.writeObject(windowStates);
-        } catch (IOException e) {
-            System.err.println("Ошибка сохранения конфигурации: " + e.getMessage());
-        }
+        storage.saveToFile(windowStates);
     }
 
-    private static class WindowState implements Serializable {
-        private static final long serialVersionUID = 1L;
-        int x, y, width, height;
-        boolean isIcon;
+    public void setWindowId(JInternalFrame frame, String windowId) {
+        frame.putClientProperty("windowId", windowId);
     }
 }

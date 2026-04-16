@@ -16,6 +16,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.JOptionPane;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
 
 import log.Logger;
 
@@ -37,6 +39,7 @@ public class MainApplicationFrame extends JFrame
         initializeFrame();
         createAndAddWindows();
         setupMenuBar();
+        enableAutoSave();
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
         addWindowListener(new WindowAdapter() {
@@ -87,6 +90,7 @@ public class MainApplicationFrame extends JFrame
     
     protected void addWindow(JInternalFrame frame, String windowId)
     {
+        stateManager.setWindowId(frame, windowId);
         desktopPane.add(frame);
         stateManager.restoreWindowState(frame, windowId);
         frame.setVisible(true);
@@ -103,7 +107,7 @@ public class MainApplicationFrame extends JFrame
     }
 
     private void closeApplication() {
-        saveAllWindowsState();
+
         UIManager.put("OptionPane.yesButtonText"   , "Да"    );
         UIManager.put("OptionPane.noButtonText"    , "Нет"   );
 
@@ -205,12 +209,45 @@ public class MainApplicationFrame extends JFrame
     }
 
     private void saveAllWindowsState() {
-        if (logWindow != null) {
-            stateManager.saveWindowState(logWindow, LOG_WINDOW_ID);
+        JInternalFrame[] allFrames = desktopPane.getAllFrames();
+        for (JInternalFrame frame : allFrames) {
+            String windowId = (String) frame.getClientProperty("windowId");
+            if (windowId != null) {
+                stateManager.saveWindowState(frame, windowId);
+            }
         }
+    }
 
-        if (gameWindow != null) {
-            stateManager.saveWindowState(gameWindow, GAME_WINDOW_ID);
+    private void enableAutoSave() {
+        JInternalFrame[] frames = desktopPane.getAllFrames();
+        for (JInternalFrame frame : frames) {
+            addSaveListeners(frame);
         }
+    }
+
+    private void addSaveListeners(JInternalFrame frame) {
+        frame.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                saveAllWindowsState();
+            }
+
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                saveAllWindowsState();
+            }
+        });
+
+        frame.addInternalFrameListener(new InternalFrameAdapter() {
+            @Override
+            public void internalFrameIconified(InternalFrameEvent e) {
+                saveAllWindowsState();
+            }
+
+            @Override
+            public void internalFrameDeiconified(InternalFrameEvent e) {
+                saveAllWindowsState();
+            }
+        });
     }
 }
