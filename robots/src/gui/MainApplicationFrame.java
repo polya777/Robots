@@ -65,6 +65,8 @@ public class MainApplicationFrame extends JFrame
 
         gameWindow = createGameWindow();
         addWindow(gameWindow, GAME_WINDOW_ID);
+
+        addWindow(gameWindow.getCoordinatesWindow(), "coordinatesWindow");
     }
 
     private GameWindow createGameWindow() {
