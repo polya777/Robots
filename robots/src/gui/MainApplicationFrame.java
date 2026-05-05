@@ -19,6 +19,10 @@ import javax.swing.JOptionPane;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 
+import model.RobotModel;
+import model.RobotCoordinatesWindow;
+import controller.RobotController;
+
 import log.Logger;
 
 public class MainApplicationFrame extends JFrame
@@ -28,14 +32,19 @@ public class MainApplicationFrame extends JFrame
 
     private static final String LOG_WINDOW_ID = "logWindow";
     private static final String GAME_WINDOW_ID = "gameWindow";
+    private static final String COORDINATES_WINDOW_ID = "coordinatesWindow";
 
     private LogWindow logWindow;
     private GameWindow gameWindow;
+    private RobotCoordinatesWindow coordinatesWindow;
+    private RobotModel robotModel;
+    private RobotController robotController;
 
     public MainApplicationFrame() {
         stateManager = new WindowStateManager();
         stateManager.loadFromFile();
 
+        initializeModels();
         initializeFrame();
         createAndAddWindows();
         setupMenuBar();
@@ -48,6 +57,12 @@ public class MainApplicationFrame extends JFrame
                 closeApplication();
             }
         });
+    }
+
+    private void initializeModels() {
+        robotModel = new RobotModel();
+        robotController = new RobotController(robotModel);
+        robotController.startModelUpdates(10); // обновление каждые 10 мс
     }
 
     private void initializeFrame() {
@@ -66,11 +81,14 @@ public class MainApplicationFrame extends JFrame
         gameWindow = createGameWindow();
         addWindow(gameWindow, GAME_WINDOW_ID);
 
-        addWindow(gameWindow.getCoordinatesWindow(), "coordinatesWindow");
+        coordinatesWindow = createCoordinatesWindow();
+        addWindow(coordinatesWindow, COORDINATES_WINDOW_ID);
+
+        robotModel.addObserver(coordinatesWindow);
     }
 
     private GameWindow createGameWindow() {
-        GameWindow gameWindow = new GameWindow();
+        GameWindow gameWindow = new GameWindow(robotModel, robotController);
         gameWindow.setSize(400, 400);
         return gameWindow;
     }
@@ -81,6 +99,13 @@ public class MainApplicationFrame extends JFrame
         configureLogWindow(logWindow);
         Logger.debug("Протокол работает");
         return logWindow;
+    }
+
+    private RobotCoordinatesWindow createCoordinatesWindow() {
+        RobotCoordinatesWindow coordinatesWindow = new RobotCoordinatesWindow();
+        coordinatesWindow.setSize(250, 80);
+        coordinatesWindow.setLocation(10, 400);
+        return coordinatesWindow;
     }
 
     private void configureLogWindow(LogWindow logWindow) {
@@ -123,6 +148,7 @@ public class MainApplicationFrame extends JFrame
 
 
         if (result == JOptionPane.YES_OPTION) {
+            robotController.stopModelUpdates();
             stateManager.saveToFile();
             System.exit(0);
         }

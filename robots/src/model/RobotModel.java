@@ -1,8 +1,9 @@
 package model;
 
-import java.util.Observable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class RobotModel extends Observable {
+public class RobotModel {
     private volatile double m_robotPositionX = 100;
     private volatile double m_robotPositionY = 100;
     private volatile double m_robotDirection = 0;
@@ -12,9 +13,11 @@ public class RobotModel extends Observable {
     private static final double maxVelocity = 0.1;
     private static final double maxAngularVelocity = 0.001;
 
+    private final List<ModelObserver> observers = new ArrayList<>();
+
     public RobotModel() {}
 
-    public void updateModel() {
+    public void updateModel(double deltaTime) {
         double distance = distance(m_targetPositionX, m_targetPositionY,
                 m_robotPositionX, m_robotPositionY);
         if (distance < 0.5) {
@@ -32,7 +35,6 @@ public class RobotModel extends Observable {
 
         moveRobot(velocity, angularVelocity, 10);
 
-        setChanged();
         notifyObservers();
     }
 
@@ -94,5 +96,15 @@ public class RobotModel extends Observable {
             angle -= 2 * Math.PI;
         }
         return angle;
+    }
+
+    public void addObserver(ModelObserver observer) {
+        observers.add(observer);
+    }
+
+    private void notifyObservers() {
+        for (ModelObserver observer : observers) {
+            observer.onModelUpdated(this);
+        }
     }
 }
