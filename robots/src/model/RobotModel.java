@@ -33,7 +33,7 @@ public class RobotModel {
             angularVelocity = -maxAngularVelocity;
         }
 
-        moveRobot(velocity, angularVelocity, 10);
+        moveRobot(velocity, angularVelocity, deltaTime);
 
         notifyObservers();
     }

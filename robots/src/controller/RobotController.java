@@ -8,7 +8,7 @@ import java.util.TimerTask;
 public class RobotController {
     private final RobotModel model;
     private final Timer timer;
-    private long lastUpdateTime;
+    private static final double FIXED_DELTA_TIME = 10;
 
     public RobotController(RobotModel model) {
         this.model = model;
@@ -16,20 +16,10 @@ public class RobotController {
     }
 
     public void startModelUpdates(int periodMs) {
-        lastUpdateTime = System.currentTimeMillis();
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                long currentTime = System.currentTimeMillis();
-                double deltaTime = (currentTime - lastUpdateTime) / 1000.0; // в секундах
-                lastUpdateTime = currentTime;
-
-                // Ограничиваем deltaTime, чтобы избежать больших скачков
-                if (deltaTime > 0.05) {
-                    deltaTime = 0.05;
-                }
-
-                model.updateModel(deltaTime);
+                model.updateModel(FIXED_DELTA_TIME);
             }
         }, 0, periodMs);
     }
